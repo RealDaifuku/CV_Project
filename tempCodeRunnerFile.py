@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, simpledialog, messagebox
+from tkinter import filedialog, simpledialog
 from PIL import Image, ImageTk
 import cv2
 import os
@@ -28,15 +28,60 @@ class PageManager(tk.Tk):
         page = self.pages[page_class]
         page.tkraise()
 
+class ImagePage(tk.Frame):
+    def __init__(self, parent, controller, bg_color, title):
+        super().__init__(parent)
+        self.controller = controller
+        self.configure(bg=bg_color)
+
+        # Center the label
+        label = tk.Label(self, text=title, font=("Arial", 16), bg=bg_color)
+        label.place(relx=0.5, rely=0.1, anchor="center")
+
+        # Reserved space for the image
+        self.image_label = tk.Label(self, bg="white", width=40, height=15, relief="solid")
+        self.image_label.place(relx=0.5, rely=0.4, anchor="center")
+
+        # Upload button
+        upload_btn = tk.Button(self, text="Upload Image", command=self.upload_image)
+        upload_btn.place(relx=0.35, rely=0.7, anchor="center")
+
+        # Delete button
+        delete_btn = tk.Button(self, text="Delete Image", command=self.delete_image)
+        delete_btn.place(relx=0.65, rely=0.7, anchor="center")
+
+        # Back button
+        back_btn = tk.Button(self, text="Back to Main", command=lambda: controller.show_page(MainPage))
+        back_btn.place(relx=0.5, rely=0.9, anchor="center")
+
+        self.current_image = None
+        self.image_path = None
+
+    def upload_image(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png;*.jpg;*.jpeg")])
+        if file_path:
+            img = Image.open(file_path)
+            img.thumbnail((300, 300), Image.LANCZOS)
+            self.current_image = ImageTk.PhotoImage(img)
+            self.image_label.config(image=self.current_image)
+            self.image_path = file_path
+
+    def delete_image(self):
+        self.image_label.config(image="", text="")
+        self.current_image = None
+        self.image_path = None
+
 class MainPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
         self.configure(bg="white")
 
+        # Center the label
         label = tk.Label(self, text="Main Page", font=("Arial", 16), bg="white")
         label.place(relx=0.5, rely=0.3, anchor="center")
 
+        # Center the buttons horizontally
         button_frame = tk.Frame(self, bg="white")
         button_frame.place(relx=0.5, rely=0.7, anchor="center")
 
@@ -52,65 +97,21 @@ class MainPage(tk.Frame):
             btn = tk.Button(button_frame, text=text, command=lambda p=page: controller.show_page(p))
             btn.pack(side="left", padx=10, pady=10)
 
-class ImagePage(tk.Frame):
-    def __init__(self, parent, controller, bg_color, title):
-        super().__init__(parent)
-        self.controller = controller
-        self.configure(bg=bg_color)
-
-        label = tk.Label(self, text=title, font=("Arial", 16), bg=bg_color)
-        label.place(relx=0.5, rely=0.1, anchor="center")
-
-        self.image_label = tk.Label(self, bg="white", relief="solid")
-        self.image_label.place(relx=0.5, rely=0.4, anchor="center")
-
-        upload_btn = tk.Button(self, text="Upload Image", command=self.upload_image)
-        upload_btn.place(relx=0.35, rely=0.7, anchor="center")
-
-        delete_btn = tk.Button(self, text="Delete Image", command=self.delete_image)
-        delete_btn.place(relx=0.65, rely=0.7, anchor="center")
-
-        back_btn = tk.Button(self, text="Back to Main", command=lambda: controller.show_page(MainPage))
-        back_btn.place(relx=0.5, rely=0.9, anchor="center")
-
-        self.current_image = None
-        self.image_path = None
-
-    def upload_image(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png;*.jpg;*.jpeg")])
-        if file_path:
-            img = Image.open(file_path)
-            width, height = img.size
-            scale_factor = min(500 / width, 300 / height)  # Maintain aspect ratio
-            new_width = int(width * scale_factor)
-            new_height = int(height * scale_factor)
-            img = img.resize((new_width, new_height), Image.LANCZOS)
-            self.current_image = ImageTk.PhotoImage(img)
-            self.image_label.config(image=self.current_image)
-            self.image_label.image = self.current_image  # Prevent garbage collection
-            self.image_label.config(width=new_width, height=new_height)  # Adjust label size
-            self.image_path = file_path
-
-    def delete_image(self):
-        self.image_label.config(image="", text="", width=0, height=0)
-        self.current_image = None
-        self.image_path = None
-
 class Page1(ImagePage):
     def __init__(self, parent, controller):
-        super().__init__(parent, controller, "lightgray", "This is Page 1")
+        super().__init__(parent, controller, bg_color="lightgray", title="This is Page 1")
 
 class Page2(ImagePage):
     def __init__(self, parent, controller):
-        super().__init__(parent, controller, "lightblue", "This is Page 2")
+        super().__init__(parent, controller, bg_color="lightblue", title="This is Page 2")
 
 class Page3(ImagePage):
     def __init__(self, parent, controller):
-        super().__init__(parent, controller, "lightgreen", "This is Page 3")
+        super().__init__(parent, controller, bg_color="lightgreen", title="This is Page 3")
 
 class Page4(ImagePage):
     def __init__(self, parent, controller):
-        super().__init__(parent, controller, "lightyellow", "This is Page 4")
+        super().__init__(parent, controller, bg_color="lightyellow", title="This is Page 4")
 
 class CameraPage(tk.Frame):
     def __init__(self, parent, controller):
@@ -118,49 +119,38 @@ class CameraPage(tk.Frame):
         self.controller = controller
         self.configure(bg="black")
 
-        self.cap = None
+        self.cap = cv2.VideoCapture(0)
         self.label = tk.Label(self)
         self.label.place(relx=0.5, rely=0.4, anchor="center")
-
-        capture_btn = tk.Button(self, text="Open Camera", command=self.start_camera)
-        capture_btn.place(relx=0.3, rely=0.8, anchor="center")
+        self.update_frame()
 
         capture_btn = tk.Button(self, text="Capture Image", command=self.capture_image)
         capture_btn.place(relx=0.5, rely=0.8, anchor="center")
 
         back_btn = tk.Button(self, text="Back to Main", command=self.close_camera)
-        back_btn.place(relx=0.7, rely=0.8, anchor="center")
-
-    def start_camera(self):
-        if self.cap is None:
-            self.cap = cv2.VideoCapture(0)
-            self.update_frame()
+        back_btn.place(relx=0.5, rely=0.9, anchor="center")
 
     def update_frame(self):
-        if self.cap is not None and self.cap.isOpened():
-            ret, frame = self.cap.read()
-            if ret:
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                img = Image.fromarray(frame)
-                img = img.resize((400, 300))
-                self.photo = ImageTk.PhotoImage(img)
-                self.label.config(image=self.photo)
-            self.after(10, self.update_frame)
+        ret, frame = self.cap.read()
+        if ret:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(frame)
+            img = img.resize((400, 300))
+            self.photo = ImageTk.PhotoImage(img)
+            self.label.config(image=self.photo)
+        self.after(10, self.update_frame)
 
     def capture_image(self):
-        if self.cap is not None and self.cap.isOpened():
-            ret, frame = self.cap.read()
-            if ret:
-                filename = simpledialog.askstring("Save Image", "Enter filename:")
-                if filename:
-                    save_path = os.path.join(os.path.expanduser("~"), "Downloads", f"{filename}.png")
-                    cv2.imwrite(save_path, frame)
-                    messagebox.showinfo("Success", f"Image saved as {save_path}")
+        ret, frame = self.cap.read()
+        if ret:
+            filename = simpledialog.askstring("Save Image", "Enter filename:")
+            if filename:
+                save_path = os.path.join(os.path.expanduser("~"), "Downloads", f"{filename}.png")
+                cv2.imwrite(save_path, frame)
+                tk.messagebox.showinfo("Success", f"Image saved as {save_path}")
 
     def close_camera(self):
-        if self.cap is not None:
-            self.cap.release()
-            self.cap = None
+        self.cap.release()
         self.controller.show_page(MainPage)
 
 if __name__ == "__main__":
